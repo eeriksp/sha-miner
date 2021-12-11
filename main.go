@@ -3,34 +3,46 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"math/rand"
+	"os"
 	"strconv"
+	"sync"
+	"sync/atomic"
 )
+var stdout = log.New(os.Stdout, "", log.Ldate | log.Ltime)
+var stderr = log.New(os.Stdout, "", log.Ldate | log.Ltime)
 
+var smallestHashMutex sync.RWMutex
 var smallestHash = []byte("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-var smallestNonss string
 var content string = "Foo"
-var numTries = 0
+var triesCount uint64
 
 func main() {
-	for true {
-		nons := generateRandomNonss()
-		sum := sha256.Sum256([]byte(content + nons))
-		if isFirstHashSmaller(sum[:], smallestHash) {
-			smallestHash = sum[:]
-			smallestNonss = nons
-			fmt.Println("New smallest:")
-			fmt.Printf(nons)
-			fmt.Println()
-			fmt.Printf("%x", sum)
-			fmt.Println()
-		}
-		numTries++
-		if numTries%10000000 == 0 {
-			fmt.Print("Num of tries: ")
-			fmt.Println(numTries)
-		}
+	var wg sync.WaitGroup
+	for _, v := range "0123456789abcdef" {
+		wg.Add(1)
+		go mine(string(v))
+	}
+	wg.Wait()
+}
 
+func mine(nonssFirstLetter string) {
+	for true {
+		nons := generateRandomNonss(nonssFirstLetter)
+		hash := sha256.Sum256([]byte(content + nons))
+		updateTriesCount()
+		if isSmallestHash(hash[:]) {
+			updateSmallestHash(nons, hash[:])
+		}
+	}
+}
+
+func updateTriesCount() {
+	atomic.AddUint64(&triesCount, 1)
+	currentCount := atomic.LoadUint64(&triesCount)
+	if currentCount%10000000 == 0 {
+		stderr.Println("Num of tries: " + strconv.FormatUint(currentCount, 10))
 	}
 }
 
@@ -38,12 +50,14 @@ func intToHex(n uint32) string {
 	return strconv.FormatInt(int64(n), 16)
 }
 
-func generateRandomNonss() string {
-	return intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + "0"
+func generateRandomNonss(nonssFirstLetter string) string {
+	return nonssFirstLetter + intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + intToHex(rand.Uint32())
 }
 
-func isFirstHashSmaller(hash1 []byte, hash2 []byte) bool {
-	return hashToInt(hash1) < hashToInt(hash2)
+func isSmallestHash(hash1 []byte) bool {
+	smallestHashMutex.RLock()
+	defer smallestHashMutex.RUnlock()
+	return hashToInt(hash1) < hashToInt(smallestHash)
 }
 
 func hashToInt(hex []byte) uint64 {
@@ -52,4 +66,16 @@ func hashToInt(hex []byte) uint64 {
 		panic(err)
 	}
 	return uint64(r)
+}
+
+func updateSmallestHash(nonss string, hash []byte) {
+	smallestHashMutex.Lock()
+	smallestHash = hash
+	smallestHashMutex.Unlock()
+	printNewNonss(nonss, hash)
+}
+
+func printNewNonss(nonss string, hash []byte) {
+	stdout.Println(nonss + " " + string(hash))
+	println(hash)
 }
