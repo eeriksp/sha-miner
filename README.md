@@ -2,8 +2,6 @@
 
 SHA-miner is a CLI tool for finding the smallest possible SHA256 hash value for a given string by appending to it a randomly generated nonce.
 
-Although it does a decent job, it is not designed for industry usage, but is more like a showcase of how parallelism and sharing data between goroutines works in Go.
-
 ## Usage
 
 Compile with

@@ -44,7 +44,7 @@ func parseArgs() (content string, threadsCount uint) {
 
 func mine(content string) {
 	for true {
-		nons := generateRandomNonss()
+		nons := generateRandomNonce()
 		hash := sha256.Sum256([]byte(content + nons))
 		updateTriesCount()
 		if isSmallestHash(hash[:]) {
@@ -65,7 +65,7 @@ func intToHex(n uint32) string {
 	return strconv.FormatInt(int64(n), 16)
 }
 
-func generateRandomNonss() string {
+func generateRandomNonce() string {
 	return fmt.Sprintf("%032s", intToHex(rand.Uint32())+intToHex(rand.Uint32())+intToHex(rand.Uint32())+intToHex(rand.Uint32()))
 }
 
@@ -83,13 +83,13 @@ func hashToInt(hex []byte) uint64 {
 	return uint64(r)
 }
 
-func updateSmallestHash(nonss string, hash []byte) {
+func updateSmallestHash(nonce string, hash []byte) {
 	smallestHashMutex.Lock()
 	smallestHash = hash
 	smallestHashMutex.Unlock()
-	printNewNonss(nonss, hash)
+	printNewNonce(nonce, hash)
 }
 
-func printNewNonss(nonss string, hash []byte) {
-	stdout.Println(nonss + " " + fmt.Sprintf("%x", hash))
+func printNewNonce(nonce string, hash []byte) {
+	stdout.Println(nonce + " " + fmt.Sprintf("%x", hash))
 }
