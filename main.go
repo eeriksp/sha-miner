@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -10,26 +11,40 @@ import (
 	"sync"
 	"sync/atomic"
 )
-var stdout = log.New(os.Stdout, "", log.Ldate | log.Ltime)
-var stderr = log.New(os.Stdout, "", log.Ldate | log.Ltime)
+
+var stdout = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+var stderr = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
 var smallestHashMutex sync.RWMutex
 var smallestHash = []byte("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
-var content string = "Foo"
 var triesCount uint64
 
 func main() {
+	content, numOfGoroutines := parseArgs()
 	var wg sync.WaitGroup
-	for _, v := range "0123456789abcdef" {
+	for i := 0; i < int(numOfGoroutines); i++ {
 		wg.Add(1)
-		go mine(string(v))
+		go mine(content)
 	}
 	wg.Wait()
 }
 
-func mine(nonssFirstLetter string) {
+func parseArgs() (content string, threadsCount uint) {
+	h := flag.Bool("h", false, "Prints this help message.")
+	help := flag.Bool("help", false, "Prints this help message.")
+	numOfGoroutines := flag.Uint("threads", 16, "The number of goroutines the the task will divided between.")
+	flag.Parse()
+	if flag.Arg(0) == "" || *h || *help {
+		println("Usage: miner <content> [--threads <threads_count>]")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+	return flag.Arg(0), *numOfGoroutines
+}
+
+func mine(content string) {
 	for true {
-		nons := generateRandomNonss(nonssFirstLetter)
+		nons := generateRandomNonss()
 		hash := sha256.Sum256([]byte(content + nons))
 		updateTriesCount()
 		if isSmallestHash(hash[:]) {
@@ -50,8 +65,8 @@ func intToHex(n uint32) string {
 	return strconv.FormatInt(int64(n), 16)
 }
 
-func generateRandomNonss(nonssFirstLetter string) string {
-	return nonssFirstLetter + intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + intToHex(rand.Uint32()) + intToHex(rand.Uint32())
+func generateRandomNonss() string {
+	return fmt.Sprintf("%032s", intToHex(rand.Uint32())+intToHex(rand.Uint32())+intToHex(rand.Uint32())+intToHex(rand.Uint32()))
 }
 
 func isSmallestHash(hash1 []byte) bool {
@@ -76,6 +91,5 @@ func updateSmallestHash(nonss string, hash []byte) {
 }
 
 func printNewNonss(nonss string, hash []byte) {
-	stdout.Println(nonss + " " + string(hash))
-	println(hash)
+	stdout.Println(nonss + " " + fmt.Sprintf("%x", hash))
 }
