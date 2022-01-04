@@ -16,6 +16,9 @@ Run with
 miner "some content" --threads 16
 ```
 
-The program starts to try different nonces. As soon as it finds a nonce with a hash value smaller than the previous smallest value, it will be printed to stdout in the following format: `<timestamp> <nonce> <hash>`. After every 10000000 tries a notice will appear to stderr.
-This it is a decent UNIX program: the actual answers go into stdout, while other messages land in stderr.
+The program starts to try different nonces. As soon as it finds a nonce with a hash value smaller than the previous smallest value, it will be printed to stdout in the following format: `<timestamp> <nonce> <hash>`.
+
+After every 10000000 tries a notice will appear to stderr.
+
+Thus it is a decent UNIX program: the actual answers go into stdout, while other messages land in stderr.
 
